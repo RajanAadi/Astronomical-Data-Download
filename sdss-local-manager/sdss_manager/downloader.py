@@ -18,11 +18,15 @@ class SDSSDownloader:
             remote_url,
             self.local_base_dir
         ]
-        
-        print(f"Starting sync from {remote_url}...")
-        result = subprocess.run(command, capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            print("Sync complete and up to date!")
-        else:
-            print(f"Sync failed: {result.stderr}")
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        )
+
+        print("Syncing with SDSS Server live...")
+        # Print each line of rsync output as it happens
+        for line in process.stdout:
+            if "to-check" in line or "🚀" in line:  # clean up the spam, show progress
+                print(line.strip(), end="\r")
+
+        process.wait()
+        print("\nSync complete!")

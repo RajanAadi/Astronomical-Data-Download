@@ -10,7 +10,7 @@ class SDSSDatabase:
         self.db_path = db_path
 
     def update_database(self):
-        """One command to rule them all: syncs data and updates indices."""
+        """Syncs data and updates indices."""
         self.downloader.sync_spectro_data()
         self.indexer.index_new_files(self.downloader.local_base_dir)
 

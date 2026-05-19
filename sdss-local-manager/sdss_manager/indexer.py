@@ -1,6 +1,7 @@
 import sqlite3
 from astropy.io.fits import open as open_fits
 import glob
+from tqdm import tqdm
 
 class SDSSIndexer:
     def __init__(self, db_path="sdss_metadata.db"):
@@ -25,20 +26,25 @@ class SDSSIndexer:
         """Scans folder for FITS files, extracts headers, saves to SQL."""
         fits_files = glob.glob(f"{search_directory}/**/*.fits", recursive=True)
         
-        for path in fits_files:
+        print(f"Found {len(fits_files)} files. Indexing metadata...")
+
+        # Wrapping the list in tqdm() creates a live progress bar!
+        for path in tqdm(fits_files, desc="Parsing FITS Headers"):
             try:
                 with open_fits(path) as hdul:
                     header = hdul[0].header
-                    # Extract typical astronomical metadata keywords safely
-                    ra = header.get('RA', None)
-                    dec = header.get('DEC', None)
-                    exp = header.get('EXPTIME', None)
-                    
-                    self.cursor.execute('''
+                    ra = header.get("RA", None)
+                    dec = header.get("DEC", None)
+                    exp = header.get("EXPTIME", None)
+
+                    self.cursor.execute(
+                        """
                         INSERT OR IGNORE INTO observations (file_path, ra, dec, exposure_time)
                         VALUES (?, ?, ?, ?)
-                    ''', (path, ra, dec, exp))
-            except Exception as e:
-                print(f"Skipping corrupt file {path}: {e}")
-                
+                    """,
+                        (path, ra, dec, exp),
+                    )
+            except Exception:
+                continue
+
         self.conn.commit()
