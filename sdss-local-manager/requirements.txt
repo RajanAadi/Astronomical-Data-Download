@@ -1,1 +1,14 @@
+# Core Scientific & Astronomy Libraries
+astropy>=6.0
+numpy>=1.24
+pandas>=2.0
 
+# Data Management & Progress Tracking
+tqdm>=4.65
+
+# Data Visualization (for checking FITS files/plots)
+matplotlib>=3.8
+
+# Database driver (Optional: SQLite is built into Python, 
+# but if you choose to upgrade to PostgreSQL later, add psycopg2)
+# psycopg2-binary>=2.9
