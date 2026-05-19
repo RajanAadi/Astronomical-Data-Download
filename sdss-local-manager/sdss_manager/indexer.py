@@ -1,6 +1,6 @@
 import sqlite3
 from astropy.io.fits import open as open_fits
-import glob
+from pathlib import Path
 from tqdm import tqdm
 
 class SDSSIndexer:
@@ -23,15 +23,30 @@ class SDSSIndexer:
         self.conn.commit()
 
     def index_new_files(self, search_directory):
-        """Scans folder for FITS files, extracts headers, saves to SQL."""
-        fits_files = glob.glob(f"{search_directory}/**/*.fits", recursive=True)
-        
-        print(f"Found {len(fits_files)} files. Indexing metadata...")
+        print("Scanning directory structure...")
 
-        # Wrapping the list in tqdm() creates a live progress bar!
-        for path in tqdm(fits_files, desc="Parsing FITS Headers"):
+        # 1. Use Pathlib to scan files streamingly
+        path_object = Path(search_directory)
+        # rglob returns a generator, which doesn't choke your memory or disk
+        fits_generator = path_object.rglob("*.fits")
+
+        # 2. Since generators don't have a pre-calculated length,
+        # we manually update tqdm so it starts ticking immediately.
+        progress_bar = tqdm(desc="Parsing FITS Headers", unit=" files")
+
+        # 3. Optimize SQLite by turning off safety features temporarily for speed
+        self.cursor.execute("PRAGMA synchronous = OFF")
+        self.cursor.execute("PRAGMA journal_mode = MEMORY")
+
+        batch_size = 1000
+        current_batch = 0
+
+        for path in fits_generator:
+            # Convert Path object to string for the database
+            file_path_str = str(path)
+
             try:
-                with open_fits(path) as hdul:
+                with open_fits(file_path_str) as hdul:
                     header = hdul[0].header
                     ra = header.get("RA", None)
                     dec = header.get("DEC", None)
@@ -42,9 +57,24 @@ class SDSSIndexer:
                         INSERT OR IGNORE INTO observations (file_path, ra, dec, exposure_time)
                         VALUES (?, ?, ?, ?)
                     """,
-                        (path, ra, dec, exp),
+                        (file_path_str, ra, dec, exp),
                     )
+
+                    current_batch += 1
+
             except Exception:
+                # Safely skip corrupt files without crashing the pipeline
                 continue
 
+            finally:
+                progress_bar.update(1)
+
+            # Commit to disk in batches of 1,000 so the database stays fast
+            if current_batch >= batch_size:
+                self.conn.commit()
+                current_batch = 0
+
+        # Final commit for any remaining files
         self.conn.commit()
+        progress_bar.close()
+        print("\nDatabase indexing finished!")
