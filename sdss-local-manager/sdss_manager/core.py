@@ -1,4 +1,7 @@
 import pandas as pd
+import sqlite3
+from .downloader import SDSSDownloader
+from .indexer import SDSSIndexer
 
 class SDSSDatabase:
     def __init__(self, local_base_dir, db_path="sdss_metadata.db"):
