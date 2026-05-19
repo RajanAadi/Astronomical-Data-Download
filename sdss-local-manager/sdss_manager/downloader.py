@@ -7,26 +7,21 @@ class SDSSDownloader:
         os.makedirs(local_base_dir, exist_ok=True)
         
     def sync_spectro_data(self, data_release="dr19", plate_folder="v6_1_3"):
-        """Syncs specific BOSS spectro data via the public SDSS rsync mirror."""
-        # SDSS public data mirror path structure
         remote_url = f"rsync://dtn.sdss.org/{data_release}/spectro/boss/redux/{plate_folder}/"
-        
-        # Rsync flags: -a (archive mode), -v (verbose), -z (compress), --progress
-        # --update ensures you only fetch newer/missing files
-        command = [
-            "rsync", "-avz", "--update", "--progress",
-            remote_url,
-            self.local_base_dir
-        ]
-        process = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-        )
 
-        print("Syncing with SDSS Server live...")
-        # Print each line of rsync output as it happens
-        for line in process.stdout:
-            if "to-check" in line or "🚀" in line:  # clean up the spam, show progress
-                print(line.strip(), end="\r")
+        # We remove --progress to stop rsync from generating millions of lines of text,
+        # but keep -v (verbose) so we know what's happening.
+        command = ["rsync", "-avz", "--update", remote_url, self.local_base_dir]
 
-        process.wait()
-        print("\nSync complete!")
+        print("Connecting to SDSS Server and syncing files...")
+        print(f"Source: {remote_url}")
+        print("This will run silently in the background until completion.")
+
+        # By NOT capturing stdout, Python passes the execution directly to the system.
+        # It will block here safely, downloading at maximum hardware speed without buffering bugs.
+        result = subprocess.run(command, capture_output=False, text=True)
+
+        if result.returncode == 0:
+            print("\nSync complete and up to date!")
+        else:
+            print("\nSync encountered an error or was interrupted.")
