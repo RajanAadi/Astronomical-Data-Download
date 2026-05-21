@@ -51,13 +51,14 @@ class SDSSIndexer:
                     ra = header.get("RA", None)
                     dec = header.get("DEC", None)
                     exp = header.get("EXPTIME", None)
+                    target_mag = header.get("MAG", None)
 
                     self.cursor.execute(
                         """
-                        INSERT OR IGNORE INTO observations (file_path, ra, dec, exposure_time)
-                        VALUES (?, ?, ?, ?)
+                        INSERT OR IGNORE INTO observations (file_path, ra, dec, exposure_time, target_mag)
+                        VALUES (?, ?, ?, ?, ?)
                     """,
-                        (file_path_str, ra, dec, exp),
+                        (file_path_str, ra, dec, exp, target_mag),
                     )
 
                     current_batch += 1

@@ -19,7 +19,7 @@ class SDSSDownloader:
 
         # By NOT capturing stdout, Python passes the execution directly to the system.
         # It will block here safely, downloading at maximum hardware speed without buffering bugs.
-        result = subprocess.run(command, capture_output=False, text=True)
+        result = subprocess.run(command, capture_output=False, text=False)
 
         if result.returncode == 0:
             print("\nSync complete and up to date!")
